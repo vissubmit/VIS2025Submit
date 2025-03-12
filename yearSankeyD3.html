@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram with D3.js</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .chart-container {
+            width: 100vw;
+            height: 98vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            position: relative;
+        }
+        .zoom-container {
+            transform-origin: 0 0;
+            cursor: grab;
+        }
+        .node rect { stroke-width: 1px; stroke: inherit; }
+        .link { fill: none; stroke-opacity: 0.5; stroke: #999; }
+        .node text { font-size: 12px; }
+    </style>
+</head>
+<body>
+    <!--h2>Sankey Diagram</h2-->
+    <div class="chart-container">
+        <svg viewBox="0 0 2000 1200" preserveAspectRatio="xMidYMid meet">
+            <g class="zoom-container"></g>
+        </svg>
+    </div>
+    
+    <script>
+        function getNodeColor(name) {
+            switch (name) {
+                // 设定年份颜色（示例）
+                case "2024": return "#B37468";
+                case "2023": return "#AC9B88";
+                case "2022": return "#BEB68E";
+                case "2021": return "#638D66";
+                case "2020": return "#7797B0";
+                case "2019": return "#CE9B57";
+                case "2018": return "#7CA67F";
+                case "2017": return "#91BF9A";
+                case "2016": return "#53718B";
+                case "2015": return "#DAAB8B";
+                case "2014": return "#AFAB63";
+                case "2013": return "#334F68";
+                case "2012": return "#E37E51";
+                case "2011": return "#8B8847";
+                case "2010": return "#3E6F96";
+
+
+                // 设定类别颜色
+                case "Time Dimension": return "#B6A659";
+                case "Space Dimension": return "#4080B1";
+                case "Narrative Intents": return "#DF9F4B";
+                case "Clustering and Taxonomy": return "#C8CDD1";
+
+                case "User Interaction": return "#D7CEA1";
+                case "Positive Experience Types": return "#D57D6C";
+                case "Negative Load Types": return "#4D8DBE";
+                case "Software-Driven Techniques": return "#7EAE81";
+                case "Hardware-Assisted Techniques": return "#92A5B3";
+
+                case "Contextual Applications": return "#94C99F";
+                case "Domain-Specific Applications": return "#748999";
+
+                
+
+                // 设定子类别颜色
+                case "Static Single Frame": return "#CEC3B6";
+                case "Static Multi Frame": return "#E3DCBB";
+                case "Animated Linear": return "#A89E6D";
+                case "Animated Non Linear": return "#D4D2A7";
+                case "Animated Real Time": return "#AFC1B0";
+                case "Hybrid Time": return "#C8DCCC";
+
+                case "Static Single View": return "#8395A5";
+                case "Static Multi View": return "#A8BAC8";
+                case "Animated Localized": return "#6793B5";
+                case "Animated Global": return "#4E677E";
+                case "Animated Path": return "#98ABB9";
+                case "Hybrid Space": return "#788897";
+
+                case "Emphasizing Actions": return "#CB9186";
+                case "Explaining Concepts": return "#FCC782";
+                case "Conveying Emotions": return "#FFDCC5";
+                case "Creating Atmosphere": return "#F7A07A";
+
+                case "Stepwise Cluster Formation": return "#B3B3B3";
+                case "Spatial Cluster Boundary": return "#D9D9D9";
+                case "Force Directed Cluster": return "#757575";
+                case "Incremental Classification Boundary": return "#94999E";
+                case "Tree Expansion": return "#D0D6E0";
+                case "Progressive Manifold Projection": return "#ACB0B9";
+                case "Hybrid Cluster": return "#9B9FA6";
+
+                case "Non Interactive": return "#CEC3B6";
+                case "Semi Interactive": return "#E3DCBB";
+                case "Fully Interactive": return "#A89E6D";
+
+                case "Emotional Experience": return "#CB9186";
+                case "Cognitive Optimization": return "#F7A07A";
+                case "Immersive Experience": return "#FFDCC5";
+                case "Inspiring Experience": return "#FCC782";
+
+                case "Information Overload": return "#8395A5";
+                case "Visual Fatigue": return "#A8BAC8";
+                case "Interaction Confusion": return "#6793B5";
+                case "Emotional Burden": return "#4E677E";
+
+                case "Rule Based": return "#91AD93";
+                case "ML or AI Generative": return "#D2CF8F";
+                case "Real Time": return "#A19E6A";
+
+                case "Virtual Reality (VR)": return "#B3B3B3";
+                case "Augmented Reality (AR)": return "#D9D9D9";
+                case "Eye Tracking": return "#757575";
+                case "Motion Sensing Devices": return "#94999E";
+                case "Multi Modal Interaction": return "#D0D6E0";
+
+                case "Education": return "#D4D2A7";
+                case "Journalism": return "#AFC1B0";
+                case "Social Advocacy": return "#C8DCCC";
+
+                case "Business": return "#C3C4D0";
+                case "Healthcare": return "#98ABB9";
+                case "Environmental Science": return "#788897";
+                case "Academic Research": return "#3E6F96";
+
+                // 默认颜色（没有指定的情况）
+                default: return "#B4BABE"; // 灰色
+            }
+        }
+        Promise.all([
+            d3.csv("category_yearly_counts.csv"),
+            d3.csv("category_subcategory_counts.csv"),
+            d3.csv("linear_regression_results.csv")
+        ]).then(([categoryYearlyCounts, categorySubcategoryCounts, regressionResults]) => {
+
+            let width = 2000, height = 1200;
+            let svg = d3.select("svg").attr("width", width).attr("height", height);
+            let container = d3.select(".zoom-container");
+
+            let years = categoryYearlyCounts.map(d => d.Year).sort((a, b) => b - a);
+            console.log(years)
+            let categories = Object.keys(categoryYearlyCounts[0]).slice(1);
+            let categoryCounts = {};
+            categoryYearlyCounts.forEach(row => {
+                categories.forEach(category => {
+                    if (!categoryCounts[category]) categoryCounts[category] = 0;
+                    categoryCounts[category] += +row[category] || 0;
+                });
+            });
+            categories.sort((a, b) => categoryCounts[b] - categoryCounts[a]);
+            console.log(categories)
+            let subcategories = Array.from(new Set(categorySubcategoryCounts.map(d => d.Subcategory)));
+            let slopeMap = {};
+            regressionResults.forEach(d => {
+                slopeMap[d.Category] = +d.Slope;
+            });
+            subcategories.sort((a, b) => (slopeMap[b] || 0) - (slopeMap[a] || 0));
+            console.log(subcategories)
+            
+            // 计算 Sankey 图整体高度
+            let sankeyHeight = height - 50;  // 给一定的 margin
+            let topMargin = 20;  // 上方间距
+            let yearSpacing = sankeyHeight / (years.length + 1);  // 计算每个年份的间隔
+
+            let yearNodes = years.map((year, index) => ({
+                name: year,
+                y0: topMargin + index * yearSpacing, // 手动连接 y 坐标，保证严格的顺序
+                y1: topMargin + index * yearSpacing + 10 // 设定固定高度
+            }));
+
+            let categoryNodes = categories.map(category => ({ name: category }));
+            let subcategoryNodes = subcategories.map(subcategory => ({ name: subcategory }));
+
+            // 按顺序连接所有节点
+            let nodes = [...yearNodes, ...categoryNodes, ...subcategoryNodes];
+
+            // 重新生成 nodeIndices，保证 years 在 nodes 里的顺序与 console.log(years) 一致
+            let nodeIndices = {};
+            nodes.forEach((d, i) => nodeIndices[d.name] = i);
+
+            console.log(years);
+            console.log(nodes);
+            
+            let links = [];
+            categoryYearlyCounts.forEach(row => {
+                let year = row.Year;
+                categories.forEach(category => {
+                    if (+row[category] > 0) {
+                        links.push({
+                            source: nodeIndices[year],
+                            target: nodeIndices[category],
+                            value: +row[category] * 1000,
+                            originalValue: +row[category]
+                        });
+                    }
+                });
+            });
+
+            categorySubcategoryCounts.forEach(row => {
+                let category = row.Category;
+                let subcategory = row.Subcategory;
+                let count = +row.Count;
+                links.push({
+                    source: nodeIndices[category],
+                    target: nodeIndices[subcategory],
+                    value: count * 1000,
+                    originalValue: count
+                });
+            });
+            
+
+
+            let sankey = d3.sankey()
+                .nodeWidth(20)
+                .nodePadding(15)
+                .extent([[1, 1], [width - 1000, height - 5]]);
+                
+                // 备份原始顺序
+                let originalNodeOrder = nodes.map(d => d.name);
+
+
+                // 运行 Sankey 计算
+                let graph = sankey
+                    .nodeSort((a, b) => originalNodeOrder.indexOf(a.name) - originalNodeOrder.indexOf(b.name))({
+                        nodes: nodes.map(d => Object.assign({}, d)),
+                        links: links.map(d => Object.assign({}, d))
+                    });
+
+                // **确保 links 按照 `years` 顺序排列**
+                graph.links.sort((a, b) => {
+                    let aSourceIndex = years.indexOf(a.source.name);
+                    let bSourceIndex = years.indexOf(b.source.name);
+
+                    // 只对 source 是年份的 link 进行排序
+                    if (aSourceIndex !== -1 && bSourceIndex !== -1) {
+                        return aSourceIndex - bSourceIndex;
+                    }
+                    return 0;
+                });
+
+                console.log("After Sorting Links:", graph.links);
+
+
+
+            let color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            // **1. 重新计算 y0, y1，确保 year 到 category 的 link 是按照 years 排序**
+            graph.links.forEach(link => {
+                let sourceNode = graph.nodes.find(n => n.name === link.source.name);
+                let targetNode = graph.nodes.find(n => n.name === link.target.name);
+
+                if (sourceNode && targetNode) {
+                    link.y0 = sourceNode.y0 + (sourceNode.y1 - sourceNode.y0) / 2;
+                    link.y1 = targetNode.y0 + (targetNode.y1 - targetNode.y0) / 2;
+                }
+            });
+
+            // **2. 确保 year 处的 y 坐标按照 link value（粗细）紧密排列**
+            graph.nodes.forEach(node => {
+                if (years.includes(node.name)) { // 只调整 year 侧
+                    let outgoingLinks = graph.links
+                        .filter(link => link.source.name === node.name)
+                        .sort((a, b) => b.value - a.value); // 按照线条粗细排序，粗的在上
+
+                    let accumulatedY = node.y0; // 从 year 的顶部开始紧密堆叠
+                    outgoingLinks.forEach(link => {
+                        link.y0 = accumulatedY + link.width / 2; // 最粗的线先放，避免间隔
+                        accumulatedY += link.width; // 直接相连
+                    });
+                }
+            });
+
+            // **3. 确保 category 处的 y 坐标按照 link value（粗细）紧密排列**
+            graph.nodes.forEach(node => {
+                if (!years.includes(node.name) && !subcategories.includes(node.name)) { // 只调整 category
+                    let incomingLinks = graph.links
+                        .filter(link => link.target.name === node.name)
+                        .sort((a, b) => b.value - a.value); // 按照线条粗细排序，粗的在上
+
+                    let accumulatedY = node.y0; // 从 category 的顶部开始紧密堆叠
+                    incomingLinks.forEach(link => {
+                        link.y1 = accumulatedY + link.width / 2; // 让最粗的线先放，避免间隔
+                        accumulatedY += link.width; // 直接相连
+                    });
+                }
+            });
+
+            // **4. 确保 category 到 subcategory 的 y 坐标按照 link value（粗细）紧密排列**
+            graph.nodes.forEach(node => {
+                if (subcategories.includes(node.name)) { // 只调整 subcategory
+                    let incomingLinks = graph.links
+                        .filter(link => link.target.name === node.name)
+                        .sort((a, b) => b.value - a.value); // 按照线条粗细排序，粗的在上
+
+                    let accumulatedY = node.y0; // 从 subcategory 的顶部开始紧密堆叠
+                    incomingLinks.forEach(link => {
+                        link.y1 = accumulatedY + link.width / 2; // 让最粗的线先放，避免间隔
+                        accumulatedY += link.width; // 直接相连
+                    });
+                }
+            });
+
+            // **5. 确保 category 作为 source 时，links 也按粗细排序**
+            graph.nodes.forEach(node => {
+                if (!years.includes(node.name) && !subcategories.includes(node.name)) { // 只调整 category
+                    let outgoingLinks = graph.links
+                        .filter(link => link.source.name === node.name)
+                        .sort((a, b) => b.value - a.value); // 按照线条粗细排序，粗的在上
+
+                    let accumulatedY = node.y0; // 从 category 的顶部开始紧密堆叠
+                    outgoingLinks.forEach(link => {
+                        link.y0 = accumulatedY + link.width / 2; // 让最粗的线先放，避免间隔
+                        accumulatedY += link.width; // 直接相连
+                    });
+                }
+            });
+
+            // **6. 绑定数据并强制顺序**
+            let link = container.append("g")
+                .selectAll(".link")
+                .data(graph.links, d => `${d.source.name}-${d.target.name}`)  // 绑定 key function，确保数据顺序不变
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .style("stroke-width", d => Math.max(1, d.width || 1))
+                .style("stroke", d => {
+                    let sourceIndex = d.source.index;
+                    let targetIndex = d.target.index;
+                    let middleIndex = years.length;
+
+                    if (sourceIndex < middleIndex) {
+                        return getNodeColor(d.source.name); // 确保左侧年份颜色正确
+                    } else {
+                        return getNodeColor(d.target.name); // 右侧类别颜色
+                    }
+                })
+                .style("stroke-opacity", 0.5)
+                .append("title")
+                .text(d => `${d.source.name} → ${d.target.name}\nCount: ${d.originalValue}`);
+
+            // **7. 强制 SVG 绘制顺序**
+            container.selectAll(".link").order(); // 让 path 按照 links 的顺序渲染
+
+            console.log("Final Nodes Order:", graph.nodes);
+            console.log("Final Links Order:", graph.links);
+
+
+
+            let node = container.append("g")
+                .selectAll(".node")
+                .data(graph.nodes)
+                .enter().append("g")
+                .attr("class", "node");
+
+                // 計算每個節點的總值
+                let nodeCounts = {};
+                graph.links.forEach(link => {
+                    nodeCounts[link.source.name] = (nodeCounts[link.source.name] || 0) + link.originalValue;
+                    nodeCounts[link.target.name] = (nodeCounts[link.target.name] || 0) + link.originalValue;
+                });
+
+                // 為節點繪製矩形
+                node.append("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", sankey.nodeWidth())
+                    .style("fill", d => getNodeColor(d.name))
+                    .append("title")
+                    .text(d => {
+                        let slopeValue = slopeMap[d.name];
+                        let tooltipText = `${d.name}\nTotal Count: ${nodeCounts[d.name] || 0}`;
+                        if (slopeValue !== undefined) {
+                            tooltipText += `\nSlope: ${slopeValue.toFixed(4)}`;
+                        }
+                        return tooltipText;
+                    });
+
+                // 為 link 添加 tooltip，顯示 slope 值
+                link.append("title")
+                    .text(d => {
+                        let slopeValue = slopeMap[d.source.name] || slopeMap[d.target.name];
+                        if (slopeValue !== undefined) {
+                            return `\nSlope: ${slopeValue.toFixed(4)}`;
+                        }
+                        return ``;
+                    });
+
+
+                    node.append("text")
+                        .attr("x", d => d.x0 - 6)
+                        .attr("y", d => (d.y1 + d.y0) / 2)
+                        .attr("dy", "0.35em")
+                        .attr("text-anchor", d => d.x0 === 0 ? "start" : (d.x1 < width / 4 ? "end" : "start"))
+                        .attr("x", d => d.x0 === 0 ? d.x0 - 6 : (d.x1 < width / 4 ? d.x0 - 6 : d.x1 + 6))
+                        .attr("fill", "#555555") // 設置文字顏色為 #333333
+                        .text(d => d.name);
+
+
+            let zoom = d3.zoom()
+                .scaleExtent([0.5, 5])
+                .on("zoom", function(event) {
+                    container.attr("transform", event.transform);
+                });
+                
+                let initialScale = 1.5;  // 初始缩放比例
+                let initialTranslateX = (width - 1100*1.5) / 2;  // 让 Sankey 图在 SVG 宽度内居中
+                let initialTranslateY = 0;  // 可调整 Y 轴的初始偏移
+                
+                function highlightLink(link) {
+                    let linkData = d3.select(link).datum();
+                    if (!linkData) return;
+
+                    // 淡化所有 link 和 node
+                    d3.selectAll(".link").style("stroke", "#D9D9D9").style("stroke-opacity", 0.5);
+                    d3.selectAll(".node rect").style("fill", "#D9D9D9").style("fill-opacity", 0.7);
+                    d3.selectAll(".node text").style("fill", "#D9D9D9"); // 淡化所有文本
+
+                    // 突出显示当前 link
+                    d3.select(link)
+                        .style("stroke", d => {
+                            let sourceIndex = d.source.index;
+                            let middleIndex = years.length;
+                            return sourceIndex < middleIndex ? getNodeColor(d.source.name) : getNodeColor(d.target.name);
+                        })
+                        .style("stroke-opacity", 0.9);
+
+                    // 突出显示关联的 nodes
+                    d3.selectAll(".node").filter(d => d === linkData.source || d === linkData.target)
+                        .select("rect")
+                        .style("fill", d => getNodeColor(d.name))
+                        .style("fill-opacity", 0.7);
+
+                    // 保留关联 nodes 的文本颜色
+                    d3.selectAll(".node").filter(d => d === linkData.source || d === linkData.target)
+                        .select("text")
+                        .style("fill", "#333333");
+                }
+
+                function highlightNode(node) {
+                    let nodeData = d3.select(node).datum();
+                    if (!nodeData) return;
+
+                    // 淡化所有 link 和 node
+                    d3.selectAll(".link").style("stroke", "#D9D9D9").style("stroke-opacity", 0.5);
+                    d3.selectAll(".node rect").style("fill", "#D9D9D9").style("fill-opacity", 0.7);
+                    d3.selectAll(".node text").style("fill", "#D9D9D9"); // 淡化所有文本
+
+                    // 突出显示当前 node
+                    d3.select(node).select("rect").style("fill", getNodeColor(nodeData.name)).style("fill-opacity", 0.8);
+
+                    // 判断当前 node 是否是最左边的 node
+                    let isLeftmostNode = graph.nodes.every(d =>
+                        graph.links.every(l => l.target !== nodeData)
+                    );
+
+                    // 高亮 node 相关的 links
+                    d3.selectAll(".link").filter(d => d.source === nodeData || d.target === nodeData)
+                        .style("stroke", d => {
+                            if (isLeftmostNode) {
+                                return getNodeColor(d.target.name);
+                            } else {
+                                let sourceIndex = d.source.index;
+                                let middleIndex = years.length;
+                                return sourceIndex < middleIndex ? getNodeColor(d.source.name) : getNodeColor(d.target.name);
+                            }
+                        })
+                        .style("stroke-opacity", 0.7);
+
+                    // 高亮相关的 nodes
+                    d3.selectAll(".node").filter(d => graph.links.some(l => (l.source === nodeData && l.target === d) || (l.target === nodeData && l.source === d)))
+                        .select("rect")
+                        .style("fill", d => getNodeColor(d.name))
+                        .style("fill-opacity", 0.8);
+
+                    // 保留当前 node 和相关 nodes 的文本颜色
+                    d3.select(node).select("text").style("fill", "#555555");
+                    d3.selectAll(".node").filter(d => graph.links.some(l => (l.source === nodeData && l.target === d) || (l.target === nodeData && l.source === d)))
+                        .select("text")
+                        .style("fill", "#555555");
+                }
+
+                function resetHighlight() {
+                    d3.selectAll(".link")
+                        .style("stroke", d => {
+                            let sourceIndex = d.source.index;
+                            let middleIndex = years.length;
+                            return sourceIndex < middleIndex ? getNodeColor(d.source.name) : getNodeColor(d.target.name);
+                        })
+                        .style("stroke-opacity", 0.5);
+
+                    d3.selectAll(".node rect")
+                        .style("fill", d => getNodeColor(d.name))
+                        .style("fill-opacity", 1);
+
+                    // 恢复所有文本颜色
+                    d3.selectAll(".node text").style("fill", "#555555");
+                }
+
+                // 绑定 hover 事件
+                d3.selectAll(".link").on("mouseover", function() { highlightLink(this); });
+                d3.selectAll(".node").on("mouseover", function() { highlightNode(this); });
+                d3.selectAll(".link, .node").on("mouseout", resetHighlight);
+
+                // 设定初始变换
+                svg.call(zoom.transform, d3.zoomIdentity.translate(initialTranslateX, initialTranslateY).scale(initialScale));
+
+            svg.call(zoom);
+        }).catch(error => console.error("Error loading CSV files:", error));
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,50 @@
+Category,Subcategory,Count
+Time Dimension,Static Single Frame,36
+Time Dimension,Static Multi Frame,52
+Time Dimension,Animated Linear,89
+Time Dimension,Animated Non Linear,97
+Time Dimension,Animated Real Time,23
+Time Dimension,Hybrid Time,100
+Space Dimension,Static Single View,41
+Space Dimension,Static Multi View,56
+Space Dimension,Animated Localized,96
+Space Dimension,Animated Global,101
+Space Dimension,Animated Path,45
+Space Dimension,Hybrid Space,89
+Narrative Intents,Emphasizing Actions,121
+Narrative Intents,Explaining Concepts,135
+Narrative Intents,Conveying Emotions,38
+Narrative Intents,Creating Atmosphere,29
+Clustering and Taxonomy,Stepwise Cluster Formation,31
+Clustering and Taxonomy,Spatial Cluster Boundary,46
+Clustering and Taxonomy,Force Directed Cluster,16
+Clustering and Taxonomy,Incremental Classification Boundary,19
+Clustering and Taxonomy,Tree Expansion,36
+Clustering and Taxonomy,Progressive Manifold Projection,7
+Clustering and Taxonomy,Hybrid Cluster,62
+User Interaction Types,Non Interactive,82
+User Interaction Types,Semi Interactive,53
+User Interaction Types,Fully Interactive,69
+Positive Experience Types,Emotional Experience,48
+Positive Experience Types,Cognitive Optimization,127
+Positive Experience Types,Immersive Experience,38
+Positive Experience Types,Inspiring Experience,101
+Negative Load Types,Information Overload,70
+Negative Load Types,Visual Fatigue,57
+Negative Load Types,Interaction Confusion,53
+Negative Load Types,Emotional Burden,18
+Software-Driven Techniques,Rule Based ,116
+Software-Driven Techniques,ML or AI Generative,14
+Software-Driven Techniques,Real Time,18
+Hardware-Assisted Techniques,Virtual Reality (VR),9
+Hardware-Assisted Techniques,Augmented Reality (AR),5
+Hardware-Assisted Techniques,Eye Tracking,10
+Hardware-Assisted Techniques,Motion Sensing Devices,4
+Hardware-Assisted Techniques,Multi Modal Interaction,25
+Contextual Applications,Education,131
+Contextual Applications,Journalism,64
+Contextual Applications,Social Advocacy,32
+Domain-Specific Applications,Business,35
+Domain-Specific Applications,Healthcare,9
+Domain-Specific Applications,Environmental Science,29
+Domain-Specific Applications,Academic Research,134
