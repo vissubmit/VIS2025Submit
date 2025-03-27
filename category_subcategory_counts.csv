@@ -4,13 +4,13 @@ Time Dimension,Static Multi Frame,52
 Time Dimension,Animated Linear,89
 Time Dimension,Animated Non Linear,97
 Time Dimension,Animated Real Time,23
-Time Dimension,Hybrid Time,100
+Time Dimension,Hybrid Time Dimension,100
 Space Dimension,Static Single View,41
 Space Dimension,Static Multi View,56
 Space Dimension,Animated Localized,96
 Space Dimension,Animated Global,101
 Space Dimension,Animated Path,45
-Space Dimension,Hybrid Space,89
+Space Dimension,Hybrid Space Dimension,89
 Narrative Intents,Emphasizing Actions,121
 Narrative Intents,Explaining Concepts,135
 Narrative Intents,Conveying Emotions,38
