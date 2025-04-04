@@ -243,7 +243,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
     .attr("x", 10)
     .attr("y", colorbarPadding)
     .attr("width", colorbarWidth)
-    .attr("height", colorbarHeight)
+    .attr("height", colorbarHeight+20)
     .style("fill", `url(#${gradientId})`);
 
   const customTicks = [-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0];
