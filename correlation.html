@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Correlation Heatmap</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    .cell {
+      stroke: #fff;
+    }
+    .label {
+      font-size: 10px;
+      text-anchor: end;
+    }
+    .group-line {
+      stroke: #23303C;
+      stroke-width: 1.2px;
+    }
+    .group-highlight {
+      stroke: #FFFFFF;
+      stroke-width: 2.2px;
+    }
+    .colorbar-label {
+      font-size: 10px;
+      text-anchor: start;
+    }
+    #tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.75);
+      color: white;
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+
+<svg id="heatmap" style="position: relative;"></svg>
+<div id="tooltip"></div>
+
+<script>
+const cellSize = 25;
+const padding = 120;
+const svgWidth = 2000;
+const svgHeight = 1800;
+
+const svg = d3.select("#heatmap")
+  .attr("width", svgWidth)
+  .attr("height", svgHeight);
+
+// 原始顏色
+const originalColors = ["#4E677E", "#8395A5", "#A8BAC8", "#E3E3E3", "#FCC782", "#F7A07A"];
+
+// 產生更平滑的插值顏色，每組插入 3 個中間色
+const interpolatedColors = [];
+for (let i = 0; i < originalColors.length - 1; i++) {
+  const c1 = d3.color(originalColors[i]);
+  const c2 = d3.color(originalColors[i + 1]);
+  const interpolator = d3.interpolateRgb(c1, c2);
+  interpolatedColors.push(originalColors[i]);
+  interpolatedColors.push(interpolator(0.25));
+  interpolatedColors.push(interpolator(0.5));
+  interpolatedColors.push(interpolator(0.75));
+}
+interpolatedColors.push(originalColors[originalColors.length - 1]);
+
+// 設定 threshold
+const numThresholds = interpolatedColors.length - 1;
+const colorThresholds = d3.range(1, numThresholds + 1).map(d => d / numThresholds);
+
+const colorScale = d3.scaleThreshold()
+  .domain(colorThresholds)
+  .range(interpolatedColors);
+
+// group 用來畫邊界線
+const groups = {
+  1: ['Static Single Frame', 'Static Multi Frame', 'Animated Linear', 'Animated Non Linear', 'Animated Real Time', 'Hybrid Time Dimension'],
+  2: ['Static Single View', 'Static Multi View', 'Animated Localized', 'Animated Global', 'Animated Path', 'Hybrid Space Dimension'],
+  3: ['Emphasizing Actions', 'Explaining Concepts', 'Conveying Emotions', 'Creating Atmosphere'],
+  4: ['Stepwise Cluster Formation', 'Spatial Cluster Boundary', 'Force Directed Cluster', 'Incremental Classification Boundary', 'Tree Expansion', 'Progressive Manifold Projection', 'Hybrid Cluster'],
+  5: ['Non Interactive', 'Semi Interactive', 'Fully Interactive'],
+  6: ['Emotional Experience', 'Cognitive Optimization', 'Immersive Experience', 'Inspiring Experience'],
+  7: ['Information Overload', 'Visual Fatigue', 'Interaction Confusion', 'Emotional Burden'],
+  8: ['Rule Based', 'AI or ML Generative', 'Real Time'],
+  9: ['Virtual Reality (VR)', 'Augmented Reality (AR)', 'Eye Tracking', 'Motion Sensing Devices', 'Multi Modal Interaction'],
+  10: ['Education', 'Journalism', 'Social Advocacy'],
+  11: ['Business', 'Healthcare', 'Environmental Science', 'Academic Research']
+};
+
+function isDarkColor(color) {
+  const c = d3.color(color);
+  if (!c) return false;
+  const luminance = 0.299 * c.r / 255 + 0.587 * c.g / 255 + 0.114 * c.b / 255;
+  return luminance < 0.6;
+}
+
+d3.csv("correlation_matrix.csv").then(function(data) {
+  const labels = data.columns.slice(1);
+  const matrix = data.map(d => labels.map(k => +d[k]));
+  const size = labels.length;
+  const tooltip = d3.select("#tooltip");
+
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      if (j <= i) {
+        const value = matrix[i][j];
+        const fillColor = colorScale(value);
+        const textColor = isDarkColor(fillColor) ? "#fff" : "#000";
+
+        const group = svg.append("g")
+          .on("mouseover", function(event) {
+            tooltip.style("opacity", 1)
+                   .html(`<strong>Value:</strong> ${value.toFixed(2)}<br>
+                          <strong>X:</strong> ${labels[j]}<br>
+                          <strong>Y:</strong> ${labels[i]}`);
+          })
+          .on("mousemove", function(event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                   .style("top", (event.pageY + 10) + "px");
+          })
+          .on("mouseout", function() {
+            tooltip.style("opacity", 0);
+          });
+
+        group.append("rect")
+          .attr("x", padding + j * cellSize)
+          .attr("y", padding + i * cellSize)
+          .attr("width", cellSize)
+          .attr("height", cellSize)
+          .attr("fill", fillColor)
+          .attr("class", "cell");
+
+        group.append("text")
+          .attr("x", padding + j * cellSize + cellSize / 2)
+          .attr("y", padding + i * cellSize + cellSize / 2 + 4)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "9px")
+          .attr("fill", textColor)
+          .text(value.toFixed(2));
+      }
+    }
+  }
+
+  labels.forEach((label, i) => {
+    svg.append("text")
+      .attr("x", padding - 6)
+      .attr("y", padding + i * cellSize + cellSize / 1.5)
+      .attr("class", "label")
+      .text(label);
+  });
+
+  labels.forEach((label, i) => {
+    svg.append("text")
+      .attr("transform", `translate(${padding + i * cellSize + cellSize / 2}, ${padding + size * cellSize + 10}) rotate(-45)`)
+      .attr("text-anchor", "end")
+      .attr("font-size", "10px")
+      .text(label);
+  });
+
+  const getIndex = name => labels.indexOf(name);
+  Object.values(groups).forEach(group => {
+    const indices = group.map(getIndex).filter(d => d !== -1);
+    if (indices.length > 0) {
+      const max = Math.max(...indices);
+      const lineY = padding + (max + 1) * cellSize;
+
+      svg.append("line")
+        .attr("x1", padding)
+        .attr("y1", lineY)
+        .attr("x2", padding + (max + 1) * cellSize)
+        .attr("y2", lineY)
+        .attr("class", "group-highlight");
+
+      svg.append("line")
+        .attr("x1", lineY)
+        .attr("y1", padding)
+        .attr("x2", lineY)
+        .attr("y2", padding + (max + 1) * cellSize)
+        .attr("class", "group-highlight");
+    }
+  });
+
+  // ===== Colorbar with fixed height =====
+  const colorbarHeight = 200;  // 固定高度，不隨 heatmap 變動
+  const colorbarWidth = 12;
+  const gradientId = "colorbar-gradient";
+  const colorbarX = padding + size * cellSize + 60;
+  const colorbarY = padding;
+
+  const defs = svg.append("defs");
+  const linearGradient = defs.append("linearGradient")
+    .attr("id", gradientId)
+    .attr("x1", "0%").attr("y1", "100%")
+    .attr("x2", "0%").attr("y2", "0%");
+
+  for (let i = 0; i < interpolatedColors.length; i++) {
+    linearGradient.append("stop")
+      .attr("offset", `${(i / (interpolatedColors.length - 1)) * 100}%`)
+      .attr("stop-color", interpolatedColors[i]);
+  }
+
+  const colorbarGroup = svg.append("g")
+    .attr("id", "colorbar-group")
+    .attr("transform", `translate(0, ${colorbarY})`);
+
+  colorbarGroup.append("rect")
+    .attr("x", colorbarX)
+    .attr("y", 0)
+    .attr("width", colorbarWidth)
+    .attr("height", colorbarHeight)
+    .style("fill", `url(#${gradientId})`);
+
+  const customTicks = [-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0];
+
+  const colorbarScale = d3.scaleLinear()
+    .domain([customTicks[0], customTicks[customTicks.length - 1]])  // [-0.2, 1.0]
+    .range([colorbarHeight, 0]);  // y 軸從下到上
+
+  const axisRight = d3.axisRight(colorbarScale)
+    .tickValues(customTicks)
+    .tickSize(4)
+    .tickFormat(d3.format(".1f"));
+
+  colorbarGroup.append("g")
+    .attr("transform", `translate(${colorbarX + colorbarWidth}, 0)`)
+    .call(axisRight)
+    .selectAll("text")
+    .style("font-size", "10px");
+
+  window.addEventListener("scroll", () => {
+    const offsetY = window.scrollY + 120;
+    d3.select("#colorbar-group")
+      .attr("transform", `translate(0, ${offsetY})`);
+  });
+
+
+});
+</script>
+</body>
+</html>
