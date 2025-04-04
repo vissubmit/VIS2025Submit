@@ -85,7 +85,7 @@ const zoom = d3.zoom()
 
 // 套用 zoom 並設定初始縮放（scale 0.7 且平移）
 svg.call(zoom);
-svg.call(zoom.transform, d3.zoomIdentity.translate(100, -30).scale(1.0));
+svg.call(zoom.transform, d3.zoomIdentity.translate(100, 100).scale(1.0));
 
 const colorbarSvg = d3.select("#colorbar-svg");
 

@@ -7,37 +7,26 @@
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
-      overflow: hidden;
     }
-
-    #heatmap-container {
-      width: 100vw;
-      height: 100vh;
-    }
-
-    #colorbar-svg {
-      position: fixed;
-      top: 100px;
-      right: 40px;
-      z-index: 100;
-      background-color: white;
-    }
-
     .cell {
       stroke: #fff;
     }
-
     .label {
       font-size: 10px;
       text-anchor: end;
     }
-
+    .group-line {
+      stroke: #23303C;
+      stroke-width: 1.2px;
+    }
     .group-highlight {
       stroke: #FFFFFF;
       stroke-width: 2.2px;
     }
-
+    .colorbar-label {
+      font-size: 10px;
+      text-anchor: start;
+    }
     #tooltip {
       position: absolute;
       background-color: rgba(0, 0, 0, 0.75);
@@ -50,7 +39,6 @@
       transition: opacity 0.2s ease;
       font-family: sans-serif;
     }
-
     #tooltip.hovering {
       font-family: Arial, sans-serif;
     }
@@ -58,10 +46,7 @@
 </head>
 <body>
 
-<div id="heatmap-container">
-  <svg id="heatmap"></svg>
-</div>
-<svg id="colorbar-svg" width="60" height="240"></svg>
+<svg id="heatmap" style="position: relative;"></svg>
 <div id="tooltip"></div>
 
 <script>
@@ -73,21 +58,6 @@ const svgHeight = 1800;
 const svg = d3.select("#heatmap")
   .attr("width", svgWidth)
   .attr("height", svgHeight);
-
-const zoomGroup = svg.append("g").attr("id", "zoomGroup");
-
-// 設定 zoom 行為
-const zoom = d3.zoom()
-  .scaleExtent([0.5, 5])
-  .on("zoom", (event) => {
-    zoomGroup.attr("transform", event.transform);
-  });
-
-// 套用 zoom 並設定初始縮放（scale 0.7 且平移）
-svg.call(zoom);
-svg.call(zoom.transform, d3.zoomIdentity.translate(100, -30).scale(1.0));
-
-const colorbarSvg = d3.select("#colorbar-svg");
 
 const originalColors = ["#4E677E", "#8395A5", "#A8BAC8", "#E3E3E3", "#FCC782", "#F7A07A"];
 const interpolatedColors = [];
@@ -143,7 +113,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
         const fillColor = colorScale(value);
         const textColor = isDarkColor(fillColor) ? "#fff" : "#000";
 
-        const group = zoomGroup.append("g")
+        const group = svg.append("g")
           .on("mouseover", function(event) {
             tooltip.classed("hovering", true)
                    .style("opacity", 1)
@@ -180,7 +150,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
   }
 
   labels.forEach((label, i) => {
-    zoomGroup.append("text")
+    svg.append("text")
       .attr("x", padding - 6)
       .attr("y", padding + i * cellSize + cellSize / 1.5)
       .attr("class", "label")
@@ -188,7 +158,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
   });
 
   labels.forEach((label, i) => {
-    zoomGroup.append("text")
+    svg.append("text")
       .attr("transform", `translate(${padding + i * cellSize + cellSize / 2}, ${padding + size * cellSize + 10}) rotate(-45)`)
       .attr("text-anchor", "end")
       .attr("font-size", "10px")
@@ -202,14 +172,14 @@ d3.csv("correlation_matrix.csv").then(function(data) {
       const max = Math.max(...indices);
       const lineY = padding + (max + 1) * cellSize;
 
-      zoomGroup.append("line")
+      svg.append("line")
         .attr("x1", padding)
         .attr("y1", lineY)
         .attr("x2", padding + (max + 1) * cellSize)
         .attr("y2", lineY)
         .attr("class", "group-highlight");
 
-      zoomGroup.append("line")
+      svg.append("line")
         .attr("x1", lineY)
         .attr("y1", padding)
         .attr("x2", lineY)
@@ -218,16 +188,13 @@ d3.csv("correlation_matrix.csv").then(function(data) {
     }
   });
 
-  // Colorbar 區塊
   const colorbarHeight = 200;
-  const colorbarPadding = 20;
-  const totalColorbarHeight = colorbarHeight + colorbarPadding * 2;
-  colorbarSvg.attr("height", totalColorbarHeight);
-
   const colorbarWidth = 12;
-  const defs = colorbarSvg.append("defs");
   const gradientId = "colorbar-gradient";
+  const colorbarX = padding + size * cellSize + 60;
+  const colorbarY = padding;
 
+  const defs = svg.append("defs");
   const linearGradient = defs.append("linearGradient")
     .attr("id", gradientId)
     .attr("x1", "0%").attr("y1", "100%")
@@ -239,9 +206,13 @@ d3.csv("correlation_matrix.csv").then(function(data) {
       .attr("stop-color", interpolatedColors[i]);
   }
 
-  colorbarSvg.append("rect")
-    .attr("x", 10)
-    .attr("y", colorbarPadding)
+  const colorbarGroup = svg.append("g")
+    .attr("id", "colorbar-group")
+    .attr("transform", `translate(0, ${colorbarY})`);
+
+  colorbarGroup.append("rect")
+    .attr("x", colorbarX)
+    .attr("y", 0)
     .attr("width", colorbarWidth)
     .attr("height", colorbarHeight)
     .style("fill", `url(#${gradientId})`);
@@ -249,18 +220,24 @@ d3.csv("correlation_matrix.csv").then(function(data) {
   const customTicks = [-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0];
   const colorbarScale = d3.scaleLinear()
     .domain([customTicks[0], customTicks[customTicks.length - 1]])
-    .range([colorbarHeight + colorbarPadding, colorbarPadding]);
+    .range([colorbarHeight, 0]);
 
   const axisRight = d3.axisRight(colorbarScale)
     .tickValues(customTicks)
     .tickSize(4)
     .tickFormat(d3.format(".1f"));
 
-  colorbarSvg.append("g")
-    .attr("transform", `translate(${10 + colorbarWidth}, 0)`)
+  colorbarGroup.append("g")
+    .attr("transform", `translate(${colorbarX + colorbarWidth}, 0)`)
     .call(axisRight)
     .selectAll("text")
     .style("font-size", "10px");
+
+  window.addEventListener("scroll", () => {
+    const offsetY = window.scrollY + 120;
+    d3.select("#colorbar-group")
+      .attr("transform", `translate(0, ${offsetY})`);
+  });
 });
 </script>
 </body>

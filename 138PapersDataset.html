@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV Table Display with D3.js</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .table-container {
+      max-width: 1200px;
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: auto;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .col-paper {
+      width: 50%;
+    }
+
+    .col-no, .col-year {
+      white-space: nowrap;
+      min-width: 50px;
+      max-width: 100px;
+    }
+
+    a {
+      color: #0077cc;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: #4E677E;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="table-container">
+    <h2 style="text-align:center;">Decoding Data Storytelling: 138 Final Papers</h2>
+    <div id="csv-table"></div>
+  </div>
+
+  <script>
+    d3.csv("VIS2025FinalPaper-forVisualization.csv").then(function(data) {
+      const table = d3.select("#csv-table").append("table");
+      const thead = table.append("thead");
+      const tbody = table.append("tbody");
+
+      const allColumns = data.columns;
+      const paperCol = allColumns.find(col => col.toLowerCase().includes("paper"));
+      const linkCol = allColumns.find(col => col.toLowerCase().includes("link"));
+      const yearCol = allColumns.find(col => col.toLowerCase() === "year");
+      const venueCol = allColumns.find(col => col.toLowerCase().includes("venue"));
+      
+      // 移除 link 與原 No. 欄（不顯示 No.，由我們手動加入）
+      const columnsToDisplay = ["No."].concat(
+        allColumns.filter(col => col !== linkCol && !col.toLowerCase().includes("no"))
+      );
+
+      // 自定義 Venue 排序順序
+      const venuePriority = ["TVCG", "CHI", "VIS", "EuroVis", "InfoVis", "VAST"];
+
+      // 定義排序函式
+      data.sort((a, b) => {
+        // 年份降序
+        const yearDiff = parseInt(b[yearCol]) - parseInt(a[yearCol]);
+        if (yearDiff !== 0) return yearDiff;
+
+        // venue 優先排序
+        const aVenueIndex = venuePriority.findIndex(v => a[venueCol]?.toUpperCase().includes(v));
+        const bVenueIndex = venuePriority.findIndex(v => b[venueCol]?.toUpperCase().includes(v));
+
+        const aIndex = aVenueIndex === -1 ? venuePriority.length : aVenueIndex;
+        const bIndex = bVenueIndex === -1 ? venuePriority.length : bVenueIndex;
+
+        return aIndex - bIndex;
+      });
+
+      // 為每行重新加入 No.
+      data.forEach((d, i) => {
+        d["No."] = i + 1;
+      });
+
+      // 表頭
+      const headerRow = thead.append("tr");
+      headerRow.selectAll("th")
+        .data(columnsToDisplay)
+        .enter()
+        .append("th")
+        .attr("class", d => {
+          const col = d.toLowerCase();
+          if (col.includes("paper")) return "col-paper";
+          if (col === "no." || col === "no") return "col-no";
+          if (col === "year") return "col-year";
+          return "";
+        })
+        .text(d => d);
+
+      // 表格內容
+      const rows = tbody.selectAll("tr")
+        .data(data)
+        .enter()
+        .append("tr");
+
+      rows.selectAll("td")
+        .data(row => columnsToDisplay.map(column => ({
+          column,
+          value: row[column],
+          link: row[linkCol]
+        })))
+        .enter()
+        .append("td")
+        .attr("class", d => {
+          const col = d.column.toLowerCase();
+          if (col.includes("paper")) return "col-paper";
+          if (col === "no." || col === "no") return "col-no";
+          if (col === "year") return "col-year";
+          return "";
+        })
+        .html(d => {
+          if (d.column === paperCol && d.link) {
+            return `<a href="${d.link}" target="_blank" rel="noopener noreferrer">${d.value}</a>`;
+          } else {
+            return d.value;
+          }
+        });
+
+    }).catch(function(error) {
+      console.error("❌ CSV unable to load:", error);
+    });
+  </script>
+</body>
+</html>
+
