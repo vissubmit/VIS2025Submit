@@ -76,14 +76,12 @@ const svg = d3.select("#heatmap")
 
 const zoomGroup = svg.append("g").attr("id", "zoomGroup");
 
-// 設定 zoom 行為
 const zoom = d3.zoom()
   .scaleExtent([0.5, 5])
   .on("zoom", (event) => {
     zoomGroup.attr("transform", event.transform);
   });
 
-// 套用 zoom 並設定初始縮放（scale 0.7 且平移）
 svg.call(zoom);
 svg.call(zoom.transform, d3.zoomIdentity.translate(100, -30).scale(1.0));
 
@@ -218,10 +216,12 @@ d3.csv("correlation_matrix.csv").then(function(data) {
     }
   });
 
-  // Colorbar 區塊
+  // ✅ 修改後的 Colorbar 區塊（上 padding 20，下 padding 40）
+  const paddingTop = 20;
+  const paddingBottom = 40;
   const colorbarHeight = 200;
-  const colorbarPadding = 20;
-  const totalColorbarHeight = colorbarHeight + colorbarPadding * 2;
+  const totalColorbarHeight = colorbarHeight + paddingTop + paddingBottom;
+
   colorbarSvg.attr("height", totalColorbarHeight);
 
   const colorbarWidth = 12;
@@ -241,7 +241,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
 
   colorbarSvg.append("rect")
     .attr("x", 10)
-    .attr("y", colorbarPadding)
+    .attr("y", paddingTop)
     .attr("width", colorbarWidth)
     .attr("height", colorbarHeight+20)
     .style("fill", `url(#${gradientId})`);
@@ -249,7 +249,7 @@ d3.csv("correlation_matrix.csv").then(function(data) {
   const customTicks = [-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0];
   const colorbarScale = d3.scaleLinear()
     .domain([customTicks[0], customTicks[customTicks.length - 1]])
-    .range([colorbarHeight + colorbarPadding, colorbarPadding]);
+    .range([paddingTop + colorbarHeight, paddingTop]);
 
   const axisRight = d3.axisRight(colorbarScale)
     .tickValues(customTicks)
