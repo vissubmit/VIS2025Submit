@@ -194,25 +194,29 @@ d3.csv("correlation_matrix.csv").then(function(data) {
   });
 
   const getIndex = name => labels.indexOf(name);
-  Object.values(groups).forEach(group => {
+  Object.values(groups).forEach((group, groupIdx) => {
     const indices = group.map(getIndex).filter(d => d !== -1);
     if (indices.length > 0) {
       const max = Math.max(...indices);
-      const lineY = padding + (max + 1) * cellSize;
+      const linePos = padding + (max + 1) * cellSize;
 
+      // 🔴 橫向分割線
       zoomGroup.append("line")
         .attr("x1", padding)
-        .attr("y1", lineY)
-        .attr("x2", padding + (max + 1) * cellSize)
-        .attr("y2", lineY)
-        .attr("class", "group-highlight");
+        .attr("y1", linePos)
+        .attr("x2", padding + size * cellSize)
+        .attr("y2", linePos)
+        .attr("class", "group-highlight")
+        .attr("stroke-width", 1.5);
 
+      // 🔴 縱向分割線（即使右上角沒有 cell 也照畫）
       zoomGroup.append("line")
-        .attr("x1", lineY)
+        .attr("x1", linePos)
         .attr("y1", padding)
-        .attr("x2", lineY)
-        .attr("y2", padding + (max + 1) * cellSize)
-        .attr("class", "group-highlight");
+        .attr("x2", linePos)
+        .attr("y2", padding + size * cellSize)
+        .attr("class", "group-highlight")
+        .attr("stroke-width", 1.5);
     }
   });
 
